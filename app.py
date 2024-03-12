@@ -4,9 +4,13 @@ import tempfile
 import os
 import boto3
 
-aws_access_key = "xxxxxx"
-aws_secret_key = "xxxxx"
-bucket_name = "xxxx"
+from dotenv import load_dotenv
+
+load_dotenv()
+# load environment variables
+aws_access_key = os.getenv("AWS_ACCESS_KEY") 
+aws_secret_key = os.getenv("AWS_SECRET_KEY")
+bucket_name = os.getenv("BUCKET_NAME")
 
 s3 = boto3.client(
     "s3", aws_access_key_id=aws_access_key, aws_secret_access_key=aws_secret_key
@@ -30,19 +34,26 @@ def process_audio_data():
     print("Processing audio...")
     # Create a temporary file to save the audio data
     try:
+        # temp_audio_uri = "https://cdn.openai.com/API/examples/data/ZyntriQix.wav"
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
             temp_audio.write(audio_data)
             temp_audio.flush()
 
-            s3.upload_file(temp_audio.name, bucket_name, temp_audio.name)
-            temp_audio_uri = f"https://{bucket_name}.s3.amazonaws.com/{temp_audio.name}"
+            # audio_name to be file name from temp_audio
+            temp_audio_name = os.path.basename(temp_audio.name)
+
+            s3.upload_file(temp_audio.name, bucket_name, temp_audio_name)
+            temp_audio_uri = f"https://{bucket_name}.s3.amazonaws.com/{temp_audio_name}"
+            # temp_audio_uri = f"s3://{bucket_name}/{temp_audio_name}"
+
+        print("temp_audio_uri: ", temp_audio_uri) 
 
         output = model.run(
             "vaibhavs10/incredibly-fast-whisper:3ab86df6c8f54c11309d4d1f930ac292bad43ace52d10c80d87eb258b3c9f79c",
             input={
                 "task": "transcribe",
                 "audio": temp_audio_uri,
-                "language": "english",
+                "language": "None",
                 "timestamp": "chunk",
                 "batch_size": 64,
                 "diarise_audio": False,
